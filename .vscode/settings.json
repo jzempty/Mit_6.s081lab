@@ -1,0 +1,10 @@
+{
+   "files.associations": {
+      "cmath": "c",
+      "*.tcc": "c",
+      "user.h": "c",
+      "stat.h": "c",
+      "types.h": "c",
+      "fs.h": "c"
+   }
+}

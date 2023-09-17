@@ -432,3 +432,14 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+void
+vmprint(pagetable_t pa){
+  printf("pa %p",pa);
+  uint64* pet=pa;
+  while(pet){
+    pet++;
+    printf("pe %p",*pet);
+  }
+
+}

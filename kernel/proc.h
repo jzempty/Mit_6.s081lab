@@ -105,4 +105,5 @@ struct proc {
   char name[16];               // Process name (debugging)
   
   int mask;
+  pagetable_t kernl_pagetable;
 };

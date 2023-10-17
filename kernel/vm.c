@@ -180,10 +180,16 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
     panic("uvmunmap: not aligned");
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
-    if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+    if((pte = walk(pagetable, a, 0)) == 0){
+      //panic("uvmunmap: walk");
+      continue;
+    }
+      
+    if((*pte & PTE_V) == 0){
+      //panic("uvmunmap: not mapped");
+      continue;
+    }
+      
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -314,10 +320,16 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+    if((pte = walk(old, i, 0)) == 0){
+      //panic("uvmcopy: pte should exist");
+      continue;
+    }
+      
+    if((*pte & PTE_V) == 0){
+     // panic("uvmcopy: page not present");
+     continue;
+    }
+      
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
@@ -440,3 +452,68 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+//pgtbl1
+void walkpagetable(pagetable_t pa,int level){
+  if(level>3) return;
+
+  for(int i=0;i<512;i++){
+    pte_t pte=pa[i];
+    if(PTE_V&pte){
+      for(int j=0;j<level;j++) printf(".. ");
+      printf("%d %p pa %p\n",i,pte,(uint64*)PTE2PA(pte));
+      walkpagetable((uint64*)PTE2PA(pte),level+1);
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pa){
+  printf("page table %p\n",pa);
+  walkpagetable(pa,1);
+}
+//end of pgtbl1
+
+//pagetable2 kernl_pagetable
+void
+kernl_kvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  if(mappages(pagetable, va, sz, pa, perm) != 0)
+    panic("kvmmap");
+}
+
+pagetable_t kvmprocint(){
+  pagetable_t kpgtbl;
+  kpgtbl=uvmcreate();//create a empty page table;
+  for(int i=1;i<512;i++){
+    kpgtbl[i]=kernel_pagetable[i];//copy 
+  }
+ // uart registers
+  kernl_kvmmap( kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kernl_kvmmap( kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  kernl_kvmmap(kpgtbl, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  kernl_kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+
+  //vmprint(kpgtbl);
+  return kpgtbl;
+}
+void freepagetable(pagetable_t pgtbl){
+    pte_t pte=pgtbl[0];
+    pagetable_t pgtbl1=(uint64*)PTE2PA(pte);
+    for(int i=0;i<512;i++){
+      if(pgtbl1[i]&PTE_V){
+        pagetable_t pgtbl2=(pagetable_t)PTE2PA(pgtbl1[i]);
+        kfree((void*) pgtbl2);
+        pgtbl[i]=0;
+      }
+    }
+    kfree((void*)pgtbl);
+    kfree((void*)pgtbl1);
+}
+

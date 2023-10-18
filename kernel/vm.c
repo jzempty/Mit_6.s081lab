@@ -3,9 +3,12 @@
 #include "memlayout.h"
 #include "elf.h"
 #include "riscv.h"
+//add in lazy 3
+#include "spinlock.h"
+#include "proc.h"
+//
 #include "defs.h"
 #include "fs.h"
-
 /*
  * the kernel's page table.
  */
@@ -95,20 +98,39 @@ uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
-  uint64 pa;
+  uint64 ka;
 
   if(va >= MAXVA)
     return 0;
 
   pte = walk(pagetable, va, 0);
-  if(pte == 0)
+
+  //add in lazy3
+  struct proc* p=myproc();
+  
+
+  if(pte == 0||(*pte & PTE_V) == 0){
+    if (va >= p->sz || va < p->trapframe->sp){
     return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
+    }
+    //map
+    void* ka =  kalloc();
+      if (ka == 0){
+        return 0;
+      } else {
+        memset(ka, 0, PGSIZE);
+        va = PGROUNDDOWN(va);
+        if(mappages(p->pagetable, va, PGSIZE, (uint64)ka, PTE_W|PTE_R|PTE_U) != 0) {
+          kfree(ka);
+          return 0;
+        }
+      }
+  }
+  //end
   if((*pte & PTE_U) == 0)
     return 0;
-  pa = PTE2PA(*pte);
-  return pa;
+  ka = PTE2PA(*pte);
+  return ka;
 }
 
 // add a mapping to the kernel page table.

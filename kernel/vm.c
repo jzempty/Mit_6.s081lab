@@ -466,7 +466,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 int
 uvmcopy_new(pagetable_t old, pagetable_t new, uint64 sz)
 {
-  printf("uvmcopy start\n");
+  //printf("uvmcopy start\n");
   pte_t *pte;
   uint64 pa, i;
   uint flags;

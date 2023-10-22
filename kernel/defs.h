@@ -63,8 +63,8 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
-extern int      reference_count[];
-extern struct spinlock ref_cnt_lock;
+extern int phy_count[];
+extern struct spinlock phy_count_lock;
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -175,6 +175,8 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 pte_t *			walk(pagetable_t, uint64, int);
 
+int             uvmcopy_new(pagetable_t old, pagetable_t new, uint64 sz);
+int             resetpte(pagetable_t pgtbl,uint64 va,uint64 ka);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);

@@ -71,8 +71,8 @@ usertrap(void)
     // ok
   } else if (r_scause() == 15) // write page fault
   { 
-    pte_t pte=walkaddr(p->pagetable,r_stval());
-    if(pte!=0){
+    pte_t *pte=walk(p->pagetable,r_stval(),0);
+    if(*pte!=0&&(*pte&PTE_COW)!=0){
       uint64 ka=(uint64)kalloc();
       if(ka==0) p->killed=1;
       else if(resetpte(p->pagetable, r_stval(),ka)< 0)
